@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { colors } from '../constants/colors';
 import { generatePuzzle } from '../services/puzzleGenerator';
 import { getCachedPuzzle } from '../services/storage';
+import { stopNativeRinging } from '../services/nativeAlarm';
 
 export default function PuzzleScreen() {
   const router = useRouter();
@@ -21,8 +22,9 @@ export default function PuzzleScreen() {
     return () => subscription.remove();
   }, []);
 
-  function checkAnswer() {
+  async function checkAnswer() {
     if (answer.trim().toLowerCase() === String(puzzle.answer).trim().toLowerCase()) {
+      await stopNativeRinging();
       Alert.alert('Solved!', 'Nice work. Alarm dismissed.', [{ text: 'Done', onPress: () => router.replace('/') }]);
     } else Alert.alert('Not quite', 'Try again.');
   }

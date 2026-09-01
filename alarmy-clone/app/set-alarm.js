@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors } from '../constants/colors';
 import { generatePuzzle } from '../services/puzzleGenerator';
 import { saveAlarm, setCachedPuzzle } from '../services/storage';
+import { cancelNativeAlarm, ensureNativeAlarmPermissions, scheduleNativeAlarm } from '../services/nativeAlarm';
 
 export default function SetAlarmScreen() {
   const router = useRouter();
@@ -15,6 +16,14 @@ export default function SetAlarmScreen() {
   async function handleSave() {
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return Alert.alert('Invalid time', 'Use 24-hour format, for example 07:30.');
     const alarm = await saveAlarm({ id: params.id, time, label, difficulty, enabled: params.enabled !== 'false' });
+    try {
+      if (alarm.enabled) {
+        await ensureNativeAlarmPermissions();
+        await scheduleNativeAlarm(alarm);
+      } else await cancelNativeAlarm(alarm.id);
+    } catch (error) {
+      return Alert.alert('Alarm permission required', error.message);
+    }
     // Generate ahead of time so the ringing screen does not depend on internet access.
     await setCachedPuzzle(await generatePuzzle(difficulty));
     router.replace('/');

@@ -5,6 +5,7 @@ import AlarmRow from '../components/AlarmRow';
 import { colors } from '../constants/colors';
 import { generatePuzzle } from '../services/puzzleGenerator';
 import { getAlarms, saveAlarm, setCachedPuzzle } from '../services/storage';
+import { cancelNativeAlarm, ensureNativeAlarmPermissions, scheduleNativeAlarm, stopNativeRinging } from '../services/nativeAlarm';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -15,7 +16,11 @@ export default function HomeScreen() {
   async function toggleAlarm(alarm) {
     const updated = { ...alarm, enabled: !alarm.enabled };
     await saveAlarm(updated);
-    if (updated.enabled) await setCachedPuzzle(await generatePuzzle(updated.difficulty));
+    if (updated.enabled) {
+      try { await ensureNativeAlarmPermissions(); await scheduleNativeAlarm(updated); }
+      catch (error) { return; }
+      await setCachedPuzzle(await generatePuzzle(updated.difficulty));
+    } else await cancelNativeAlarm(updated.id);
     setAlarms((current) => current.map((item) => (item.id === updated.id ? updated : item)));
   }
 
