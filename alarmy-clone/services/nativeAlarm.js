@@ -1,6 +1,33 @@
-import { NativeModules, Platform } from 'react-native';
+import { Linking, NativeModules, PermissionsAndroid, Platform } from 'react-native';
 
 const native = Platform.OS === 'android' ? NativeModules.AlarmModule : null;
+
+export async function requestNotificationPermission() {
+  if (Platform.OS !== 'android' || Platform.Version < 33) return true;
+  const permission = PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS;
+  if (await PermissionsAndroid.check(permission)) return true;
+  const result = await PermissionsAndroid.request(permission, {
+    title: 'Allow alarm notifications',
+    message: 'Alarmy needs notifications to show the full-screen alarm and keep it active until you solve the puzzle.',
+    buttonPositive: 'Allow',
+    buttonNegative: 'Not now',
+  });
+  return result === PermissionsAndroid.RESULTS.GRANTED;
+}
+
+export function openAppSettings() {
+  return Linking.openSettings();
+}
+
+export async function canUseFullScreenIntent() {
+  if (!native) return true;
+  return native.canUseFullScreenIntent();
+}
+
+export function openFullScreenIntentSettings() {
+  if (!native) return Promise.resolve();
+  return native.openFullScreenIntentSettings();
+}
 
 function nextOccurrence(time) {
   const [hours, minutes] = String(time).split(':').map(Number);
@@ -23,6 +50,11 @@ export async function cancelNativeAlarm(id) {
 export async function stopNativeRinging() {
   if (!native) return;
   return native.stopRinging();
+}
+
+export async function scheduleTestNativeAlarm() {
+  if (!native) return;
+  return native.scheduleTestAlarm();
 }
 
 export async function ensureNativeAlarmPermissions() {

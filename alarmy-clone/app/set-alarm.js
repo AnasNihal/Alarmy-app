@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Alert, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors } from '../constants/colors';
 import { generatePuzzle } from '../services/puzzleGenerator';
 import { saveAlarm, setCachedPuzzle } from '../services/storage';
-import { cancelNativeAlarm, ensureNativeAlarmPermissions, scheduleNativeAlarm } from '../services/nativeAlarm';
+import { cancelNativeAlarm, canUseFullScreenIntent, ensureNativeAlarmPermissions, openAppSettings, openFullScreenIntentSettings, requestNotificationPermission, scheduleNativeAlarm } from '../services/nativeAlarm';
 
 export default function SetAlarmScreen() {
   const router = useRouter();
@@ -15,12 +16,29 @@ export default function SetAlarmScreen() {
 
   async function handleSave() {
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return Alert.alert('Invalid time', 'Use 24-hour format, for example 07:30.');
-    const alarm = await saveAlarm({ id: params.id, time, label, difficulty, enabled: params.enabled !== 'false' });
     try {
-      if (alarm.enabled) {
+      const enabled = params.enabled !== 'false';
+      const draft = { id: params.id, time, label, difficulty, enabled };
+      // Validate/schedule first so a permission failure does not leave a saved but inactive alarm.
+      if (enabled) {
+        if (!(await requestNotificationPermission())) {
+          Alert.alert('Notifications are required', 'Alarmy cannot show the full-screen alarm without notification permission. Enable notifications in Settings, then try again.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: openAppSettings },
+          ]);
+          return;
+        }
         await ensureNativeAlarmPermissions();
-        await scheduleNativeAlarm(alarm);
-      } else await cancelNativeAlarm(alarm.id);
+        if (!(await canUseFullScreenIntent())) {
+          Alert.alert('Full-screen alarm is disabled', 'Enable full-screen notifications for Alarmy in Android settings so the alarm can appear over the lock screen.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: openFullScreenIntentSettings },
+          ]);
+          return;
+        }
+      } else if (params.id) await cancelNativeAlarm(params.id);
+      const alarm = await saveAlarm(draft);
+      if (enabled) await scheduleNativeAlarm(alarm);
     } catch (error) {
       return Alert.alert('Alarm permission required', error.message);
     }
@@ -30,7 +48,7 @@ export default function SetAlarmScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <LinearGradient colors={['#F4F3FF', '#FFFFFF']} style={styles.safe}><SafeAreaView style={styles.safe}>
       <View style={styles.header}><Pressable onPress={() => router.back()}><Text style={styles.back}>‹ Back</Text></Pressable><Text style={styles.title}>Set alarm</Text></View>
       <View style={styles.content}>
         <Text style={styles.fieldLabel}>Time</Text>
@@ -41,7 +59,7 @@ export default function SetAlarmScreen() {
         <View style={styles.choices}>{['easy', 'medium', 'hard'].map((item) => <Pressable key={item} onPress={() => setDifficulty(item)} style={[styles.choice, difficulty === item && styles.choiceSelected]}><Text style={[styles.choiceText, difficulty === item && styles.choiceTextSelected]}>{item}</Text></Pressable>)}</View>
         <Pressable style={styles.save} onPress={handleSave}><Text style={styles.saveText}>Save alarm</Text></Pressable>
       </View>
-    </SafeAreaView>
+    </SafeAreaView></LinearGradient>
   );
 }
 

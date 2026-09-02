@@ -14,12 +14,21 @@ public final class AlarmScheduler {
   private AlarmScheduler() {}
 
   public static void schedule(Context context, String id, long timestamp, String label) {
+    schedule(context, id, timestamp, label, true);
+  }
+
+  public static void scheduleOnce(Context context, String id, long timestamp, String label) {
+    schedule(context, id, timestamp, label, false);
+  }
+
+  private static void schedule(Context context, String id, long timestamp, String label, boolean recurring) {
     AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
     if (alarmManager == null) throw new IllegalStateException("AlarmManager unavailable");
 
     Intent intent = new Intent(context, AlarmReceiver.class)
         .putExtra(AlarmReceiver.EXTRA_ID, id)
-        .putExtra(AlarmReceiver.EXTRA_LABEL, label == null ? "Alarm" : label);
+        .putExtra(AlarmReceiver.EXTRA_LABEL, label == null ? "Alarm" : label)
+        .putExtra(AlarmReceiver.EXTRA_TEST, !recurring);
     PendingIntent pendingIntent = PendingIntent.getBroadcast(
         context, requestCode(id), intent,
         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
@@ -29,9 +38,11 @@ public final class AlarmScheduler {
     }
     // RTC_WAKEUP uses wall-clock time and wakes the CPU. AllowWhileIdle lets it fire in Doze.
     alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timestamp, pendingIntent);
-    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-        .putString(PREFIX + id, timestamp + "|" + (label == null ? "Alarm" : label))
-        .apply();
+    if (recurring) {
+      context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+          .putString(PREFIX + id, timestamp + "|" + (label == null ? "Alarm" : label))
+          .apply();
+    }
   }
 
   public static void cancel(Context context, String id) {
