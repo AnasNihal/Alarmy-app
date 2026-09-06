@@ -8,6 +8,7 @@ module.exports = function withAlarmNative(config) {
       'android.permission.SCHEDULE_EXACT_ALARM',
       'android.permission.USE_FULL_SCREEN_INTENT',
       'android.permission.POST_NOTIFICATIONS',
+      'android.permission.RECEIVE_BOOT_COMPLETED',
       'android.permission.WAKE_LOCK',
       'android.permission.FOREGROUND_SERVICE',
       'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
