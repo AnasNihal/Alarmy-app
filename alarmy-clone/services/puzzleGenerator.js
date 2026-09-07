@@ -3,8 +3,8 @@ import { fallbackPuzzles } from '../constants/fallbackPuzzles';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
-function localPuzzle() {
-  return fallbackPuzzles[Math.floor(Math.random() * fallbackPuzzles.length)];
+export function getFallbackPuzzle() {
+  return { ...fallbackPuzzles[Math.floor(Math.random() * fallbackPuzzles.length)] };
 }
 
 function parsePuzzle(text) {
@@ -15,7 +15,7 @@ function parsePuzzle(text) {
 }
 
 export async function generatePuzzle(difficulty = 'easy') {
-  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'your_gemini_api_key_here') return localPuzzle();
+  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'your_gemini_api_key_here') return getFallbackPuzzle();
   try {
     const response = await fetch(`${ENDPOINT}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
@@ -29,6 +29,6 @@ export async function generatePuzzle(difficulty = 'easy') {
     return parsePuzzle(text);
   } catch {
     // Offline fallback means an alarm always has a puzzle to display.
-    return localPuzzle();
+    return getFallbackPuzzle();
   }
 }

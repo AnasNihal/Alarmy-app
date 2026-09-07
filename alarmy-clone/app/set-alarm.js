@@ -38,12 +38,14 @@ export default function SetAlarmScreen() {
         }
       } else if (params.id) await cancelNativeAlarm(params.id);
       const alarm = await saveAlarm(draft);
-      if (enabled) await scheduleNativeAlarm(alarm);
+      if (enabled) {
+        const puzzle = await generatePuzzle(difficulty);
+        await setCachedPuzzle(puzzle, alarm.id);
+        await scheduleNativeAlarm(alarm);
+      }
     } catch (error) {
       return Alert.alert('Alarm permission required', error.message);
     }
-    // Generate ahead of time so the ringing screen does not depend on internet access.
-    await setCachedPuzzle(await generatePuzzle(difficulty));
     router.replace('/');
   }
 

@@ -25,6 +25,9 @@ class MainActivity : ReactActivity() {
       window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
       window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
     }
+    // The ringing activity must remain interactive even if Expo's optional
+    // keep-awake dev hook cannot find the current Activity during cold start.
+    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     super.onCreate(null)
   }
 

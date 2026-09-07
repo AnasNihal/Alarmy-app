@@ -2,7 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // AsyncStorage is React Native's persistent key/value store; it replaces localStorage on mobile.
 const ALARMS_KEY = '@alarmy/alarms';
-const PUZZLE_KEY = '@alarmy/todays-puzzle';
+const PUZZLES_KEY = '@alarmy/puzzles';
+const LEGACY_PUZZLE_KEY = '@alarmy/todays-puzzle';
 
 const readJson = async (key, fallback) => {
   try {
@@ -29,13 +30,29 @@ export async function deleteAlarm(id) {
   await AsyncStorage.setItem(ALARMS_KEY, JSON.stringify(alarms.filter((alarm) => alarm.id !== id)));
 }
 
-export async function getCachedPuzzle() {
-  const puzzle = await readJson(PUZZLE_KEY, null);
-  return puzzle?.cachedDate === new Date().toISOString().slice(0, 10) ? puzzle : null;
+function isValidPuzzle(puzzle) {
+  return Boolean(puzzle?.question && puzzle?.answer !== undefined);
 }
 
-export async function setCachedPuzzle(puzzle) {
+export async function getCachedPuzzle(alarmId) {
+  const today = new Date().toISOString().slice(0, 10);
+  const puzzles = await readJson(PUZZLES_KEY, {});
+  const stored = alarmId == null ? null : puzzles?.[String(alarmId)];
+  if (stored?.cachedDate === today && isValidPuzzle(stored)) return stored;
+  if (alarmId == null || alarmId === '') {
+    const legacy = await readJson(LEGACY_PUZZLE_KEY, null);
+    return legacy?.cachedDate === today && isValidPuzzle(legacy) ? legacy : null;
+  }
+  return null;
+}
+
+export async function setCachedPuzzle(puzzle, alarmId) {
   const value = { ...puzzle, cachedDate: new Date().toISOString().slice(0, 10) };
-  await AsyncStorage.setItem(PUZZLE_KEY, JSON.stringify(value));
+  if (alarmId == null || alarmId === '') {
+    await AsyncStorage.setItem(LEGACY_PUZZLE_KEY, JSON.stringify(value));
+    return value;
+  }
+  const puzzles = await readJson(PUZZLES_KEY, {});
+  await AsyncStorage.setItem(PUZZLES_KEY, JSON.stringify({ ...puzzles, [String(alarmId)]: value }));
   return value;
 }

@@ -21,11 +21,11 @@ export default function HomeScreen() {
         if (!(await requestNotificationPermission())) return showNotificationDenied();
         await ensureNativeAlarmPermissions();
         if (!(await canUseFullScreenIntent())) return showFullScreenIntentUnavailable();
+        await setCachedPuzzle(await generatePuzzle(updated.difficulty), updated.id);
         await scheduleNativeAlarm(updated);
       }
       else await cancelNativeAlarm(updated.id);
       await saveAlarm(updated);
-      if (updated.enabled) await setCachedPuzzle(await generatePuzzle(updated.difficulty));
       setAlarms((current) => current.map((item) => (item.id === updated.id ? updated : item)));
     } catch (error) { Alert.alert('Could not update alarm', error.message || 'Please try again.'); }
   }

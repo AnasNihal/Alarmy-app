@@ -37,6 +37,7 @@
       </intent-filter>
     </activity>
     <receiver android:name=".AlarmReceiver" android:exported="false"/>
+    <receiver android:name=".AlarmStopReceiver" android:exported="false"/>
     <receiver android:name=".BootReceiver" android:enabled="true" android:exported="true" android:directBootAware="true">
       <intent-filter>
         <action android:name="android.intent.action.BOOT_COMPLETED"/>

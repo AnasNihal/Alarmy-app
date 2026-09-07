@@ -1,31 +1,42 @@
 import { useEffect, useState } from 'react';
 import { Alert, BackHandler, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors } from '../constants/colors';
-import { generatePuzzle } from '../services/puzzleGenerator';
-import { getCachedPuzzle } from '../services/storage';
+import { generatePuzzle, getFallbackPuzzle } from '../services/puzzleGenerator';
+import { getAlarms, getCachedPuzzle } from '../services/storage';
 import { stopNativeRinging } from '../services/nativeAlarm';
 
 export default function PuzzleScreen() {
   const router = useRouter();
-  const [puzzle, setPuzzle] = useState(null);
+  const { alarmId } = useLocalSearchParams();
+  const resolvedAlarmId = Array.isArray(alarmId) ? alarmId[0] : alarmId;
+  // Render a solvable puzzle immediately, even if storage/network is unavailable.
+  const [puzzle, setPuzzle] = useState(getFallbackPuzzle);
   const [answer, setAnswer] = useState('');
 
   useEffect(() => {
     async function loadPuzzle() {
-      const cached = await getCachedPuzzle();
-      setPuzzle(cached || await generatePuzzle('easy'));
+      try {
+        const cached = await getCachedPuzzle(resolvedAlarmId);
+        if (cached) return setPuzzle(cached);
+        const alarms = await getAlarms();
+        const difficulty = alarms.find((item) => String(item.id) === String(resolvedAlarmId))?.difficulty || 'easy';
+        const generated = await generatePuzzle(difficulty);
+        setPuzzle(generated?.question && generated?.answer !== undefined ? generated : getFallbackPuzzle());
+      } catch {
+        setPuzzle(getFallbackPuzzle());
+      }
     }
     loadPuzzle();
     // Android's hardware back button is intercepted so the ringing alarm cannot be dismissed.
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => true);
     return () => subscription.remove();
-  }, []);
+  }, [resolvedAlarmId]);
 
   async function checkAnswer() {
     if (answer.trim().toLowerCase() === String(puzzle.answer).trim().toLowerCase()) {
-      await stopNativeRinging();
+      try { await stopNativeRinging(); } catch { /* Solving must remain possible if native stop fails. */ }
       Alert.alert('Solved!', 'Nice work. Alarm dismissed.', [{ text: 'Done', onPress: () => router.replace('/') }]);
     } else Alert.alert('Not quite', 'Try again.');
   }
