@@ -25,7 +25,8 @@
     "scheme": "alarmyclone",
     "plugins": [
       "expo-router",
-      "./plugins/withAlarmNative"
+      "./plugins/withAlarmNative",
+      "@react-native-community/datetimepicker"
     ]
   }
 }
