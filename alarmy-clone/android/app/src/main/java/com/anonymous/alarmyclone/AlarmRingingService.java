@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.graphics.drawable.Icon;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -16,9 +17,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.util.Log;
 
 /** Keeps the alarm alive after the app process is backgrounded or killed. */
 public class AlarmRingingService extends Service {
+  private static final String TAG = "AlarmyAlarm";
   private static final int NOTIFICATION_ID = 731;
   private static final String CHANNEL_ID = "alarm_ringing";
   private static final int EMERGENCY_STOP_REQUEST_CODE = 733;
@@ -31,6 +34,7 @@ public class AlarmRingingService extends Service {
   @Override public int onStartCommand(Intent intent, int flags, int startId) {
     String alarmId = intent == null ? "" : intent.getStringExtra(AlarmReceiver.EXTRA_ID);
     String label = intent == null ? "Alarm" : intent.getStringExtra(AlarmReceiver.EXTRA_LABEL);
+    Log.i(TAG, "ringing service started id=" + alarmId);
     createChannel();
     startForeground(NOTIFICATION_ID, buildNotification(alarmId, label));
     acquireWakeLock();
@@ -39,6 +43,7 @@ public class AlarmRingingService extends Service {
     // after the user force-stops the app or the OS reclaims its process.
     safetyHandler.removeCallbacks(safetyStop);
     safetyHandler.postDelayed(safetyStop, SAFETY_TIMEOUT_MS);
+    Log.i(TAG, "safety timeout scheduled in 15 minutes id=" + alarmId);
     return START_NOT_STICKY;
   }
 
@@ -50,7 +55,8 @@ public class AlarmRingingService extends Service {
     PendingIntent fullScreen = PendingIntent.getActivity(this, 732, openIntent,
         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     Intent emergencyIntent = new Intent(this, AlarmStopReceiver.class)
-        .setAction(AlarmStopReceiver.ACTION_EMERGENCY_STOP);
+        .setAction(AlarmStopReceiver.ACTION_EMERGENCY_STOP)
+        .setPackage(getPackageName());
     PendingIntent emergencyStop = PendingIntent.getBroadcast(this, EMERGENCY_STOP_REQUEST_CODE,
         emergencyIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
@@ -63,7 +69,9 @@ public class AlarmRingingService extends Service {
         .setPriority(Notification.PRIORITY_MAX)
         .setOngoing(true)
         .setAutoCancel(false)
-        .addAction(new Notification.Action.Builder(null, "Emergency Stop", emergencyStop).build())
+        .addAction(new Notification.Action.Builder(
+            Icon.createWithResource(this, com.anonymous.alarmyclone.R.mipmap.ic_launcher),
+            "Emergency Stop", emergencyStop).build())
         .setFullScreenIntent(fullScreen, true)
         .setContentIntent(fullScreen)
         .build();
@@ -104,10 +112,12 @@ public class AlarmRingingService extends Service {
   }
 
   public static void stop(Context context) {
+    Log.i(TAG, "stopping ringing service");
     context.stopService(new Intent(context, AlarmRingingService.class));
   }
 
   @Override public void onDestroy() {
+    Log.i(TAG, "ringing service destroyed; audio stopped");
     safetyHandler.removeCallbacks(safetyStop);
     if (player != null) {
       try { if (player.isPlaying()) player.stop(); } catch (Exception ignored) { }

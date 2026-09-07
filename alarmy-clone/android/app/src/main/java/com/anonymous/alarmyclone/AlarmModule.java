@@ -11,9 +11,11 @@ import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import android.util.Log;
 
 /** JavaScript bridge used by the Expo Router screens to control native alarms. */
 public class AlarmModule extends ReactContextBaseJavaModule {
+  private static final String TAG = "AlarmyAlarm";
   public AlarmModule(ReactApplicationContext context) { super(context); }
   @NonNull @Override public String getName() { return "AlarmModule"; }
 
@@ -28,6 +30,7 @@ public class AlarmModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod public void stopRinging(Promise promise) {
+    Log.i(TAG, "JS requested stopRinging");
     AlarmRingingService.stop(getReactApplicationContext()); promise.resolve(true);
   }
 

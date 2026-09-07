@@ -15,16 +15,26 @@ export default function PuzzleScreen() {
   const [puzzle, setPuzzle] = useState(getFallbackPuzzle);
   const [answer, setAnswer] = useState('');
 
+  console.log(`[AlarmyTrace] puzzle render alarmId=${String(resolvedAlarmId)} hasPuzzle=${Boolean(puzzle)} question=${puzzle?.question || '<none>'}`);
+
   useEffect(() => {
+    console.log(`[AlarmyTrace] puzzle screen mounted alarmId=${String(resolvedAlarmId)}`);
     async function loadPuzzle() {
       try {
+        console.log(`[AlarmyTrace] puzzle load started alarmId=${String(resolvedAlarmId)}`);
         const cached = await getCachedPuzzle(resolvedAlarmId);
-        if (cached) return setPuzzle(cached);
+        if (cached) {
+          console.log(`[AlarmyTrace] puzzle loaded from cache alarmId=${String(resolvedAlarmId)}`);
+          return setPuzzle(cached);
+        }
         const alarms = await getAlarms();
         const difficulty = alarms.find((item) => String(item.id) === String(resolvedAlarmId))?.difficulty || 'easy';
         const generated = await generatePuzzle(difficulty);
-        setPuzzle(generated?.question && generated?.answer !== undefined ? generated : getFallbackPuzzle());
-      } catch {
+        const nextPuzzle = generated?.question && generated?.answer !== undefined ? generated : getFallbackPuzzle();
+        console.log(`[AlarmyTrace] puzzle generated/fallback ready alarmId=${String(resolvedAlarmId)} question=${nextPuzzle.question}`);
+        setPuzzle(nextPuzzle);
+      } catch (error) {
+        console.warn(`[AlarmyTrace] puzzle load failed; using fallback alarmId=${String(resolvedAlarmId)}`, error?.message || error);
         setPuzzle(getFallbackPuzzle());
       }
     }

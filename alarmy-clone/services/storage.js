@@ -8,8 +8,10 @@ const LEGACY_PUZZLE_KEY = '@alarmy/todays-puzzle';
 const readJson = async (key, fallback) => {
   try {
     const value = await AsyncStorage.getItem(key);
+    console.log(`[AlarmyTrace] storage read key=${key} found=${Boolean(value)}`);
     return value ? JSON.parse(value) : fallback;
-  } catch {
+  } catch (error) {
+    console.warn(`[AlarmyTrace] storage read failed key=${key}`, error?.message || error);
     return fallback;
   }
 };
@@ -35,10 +37,15 @@ function isValidPuzzle(puzzle) {
 }
 
 export async function getCachedPuzzle(alarmId) {
+  console.log(`[AlarmyTrace] puzzle lookup alarmId=${String(alarmId)}`);
   const today = new Date().toISOString().slice(0, 10);
   const puzzles = await readJson(PUZZLES_KEY, {});
   const stored = alarmId == null ? null : puzzles?.[String(alarmId)];
-  if (stored?.cachedDate === today && isValidPuzzle(stored)) return stored;
+  if (stored?.cachedDate === today && isValidPuzzle(stored)) {
+    console.log(`[AlarmyTrace] puzzle cache hit alarmId=${String(alarmId)}`);
+    return stored;
+  }
+  console.warn(`[AlarmyTrace] puzzle cache miss/invalid alarmId=${String(alarmId)}`);
   if (alarmId == null || alarmId === '') {
     const legacy = await readJson(LEGACY_PUZZLE_KEY, null);
     return legacy?.cachedDate === today && isValidPuzzle(legacy) ? legacy : null;
@@ -47,6 +54,7 @@ export async function getCachedPuzzle(alarmId) {
 }
 
 export async function setCachedPuzzle(puzzle, alarmId) {
+  console.log(`[AlarmyTrace] puzzle cache write alarmId=${String(alarmId)}`);
   const value = { ...puzzle, cachedDate: new Date().toISOString().slice(0, 10) };
   if (alarmId == null || alarmId === '') {
     await AsyncStorage.setItem(LEGACY_PUZZLE_KEY, JSON.stringify(value));

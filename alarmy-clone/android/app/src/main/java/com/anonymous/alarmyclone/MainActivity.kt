@@ -3,6 +3,8 @@ package com.anonymous.alarmyclone
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
+import android.content.Intent
+import android.util.Log
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -12,7 +14,13 @@ import com.facebook.react.defaults.DefaultReactActivityDelegate
 import expo.modules.ReactActivityDelegateWrapper
 
 class MainActivity : ReactActivity() {
+  private val alarmTag = "AlarmyAlarm"
+
   override fun onCreate(savedInstanceState: Bundle?) {
+    Log.i(alarmTag, "MainActivity onCreate data=${intent?.data} extras=${intent?.extras?.keySet()}")
+    // Expo's template intentionally passes null state here, but preserve the
+    // native alarm intent so Linking can read it during a cold start.
+    setIntent(intent)
     // Set the theme to AppTheme BEFORE onCreate to support
     // coloring the background, status bar, and navigation bar.
     // This is required for expo-splash-screen.
@@ -29,6 +37,14 @@ class MainActivity : ReactActivity() {
     // keep-awake dev hook cannot find the current Activity during cold start.
     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     super.onCreate(null)
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    setIntent(intent)
+    Log.i(alarmTag, "MainActivity onNewIntent data=${intent.data} extras=${intent.extras?.keySet()}")
+    // Update the Activity intent before React/Expo processes it so Linking
+    // receives the alarm URI on a warm/backgrounded app.
+    super.onNewIntent(intent)
   }
 
   /**
